@@ -1,4 +1,4 @@
-# Bonyan (بنيان) 🏠💰
+# Bonyan  🏠💰
 
 > **A smart budget planning platform for home finishing and furnishing.**
 
