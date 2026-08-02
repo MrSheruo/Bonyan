@@ -71,3 +71,32 @@ Planned updates beyond the MVP release:
 ## 🚧 Status
 
 **In Active Development** — Building the MVP scope described above.
+```text
+bonyan/
+├── backend/
+│   ├── migrations/          # Database migration files
+│   ├── src/                 # Application source code
+│   │   ├── admin/           # Admin management endpoints & logic
+│   │   ├── auth/            # Authentication & Role-Based Access Control
+│   │   ├── budget/          # Budget Allocation Engine
+│   │   ├── categories/      # Category management & rules
+│   │   ├── listings/        # Product listings & supplier feeds
+│   │   ├── products/        # Product Filtering & Discovery Engine
+│   │   ├── purchases/       # Purchase tracking & transaction management
+│   │   ├── recommendations/ # Rule-based Recommendation Engine
+│   │   ├── shared/          # Shared utilities, constants, & middlewares
+│   │   ├── stores/          # Vendor & store management
+│   │   ├── users/           # Customer & user profile logic
+│   │   └── index.ts         # Main API application entry point
+│   ├── .env                 # Environment variables
+│   ├── .gitignore           # Git ignore config
+│   ├── package.json         # Node.js dependencies & scripts
+│   ├── tsconfig.json        # TypeScript compiler options
+│   └── readme.md            # Backend documentation
+├── frontend/
+│   ├── assets/              # Images, icons, and static assets
+│   ├── css/                 # Stylesheets
+│   ├── js/                  # Frontend scripts & logic
+│   ├── lib/                 # Third-party libraries & dependencies
+│   └── index.html           # Main frontend entry point
+└── readme.md                # Project main documentation
