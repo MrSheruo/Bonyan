@@ -1,15 +1,11 @@
-import express, { type Request, type Response, type NextFunction } from "express"
+import express from "express";
+import { loginController, logoutController, registerController } from "./auth.controller.js";
+import { requireAuth, requireGuest } from "@/shared/middlewares/auth.middleware.js";
 
 const authRouter = express.Router();
 
-authRouter.post("/register", (req: Request, res: Response) => {
-    const userData = req.body
+authRouter.post("/register", requireGuest, registerController);
+authRouter.post("/login", requireGuest, loginController);
 
-    console.log(userData);
-
-    res.send(JSON.stringify(userData))
-
-})
-
-
+authRouter.post("/logout", requireAuth, logoutController);
 export default authRouter;
