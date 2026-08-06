@@ -370,3 +370,23 @@ export const purchases = pgTable(
         categoryIdIdx: index("purchases_category_id_idx").on(table.categoryId),
     })
 );
+
+export const discounts = pgTable(
+    "discounts",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        productId: uuid("product_id")
+            .notNull()
+            .references(() => products.id, { onDelete: "cascade" }),
+        percentage: numeric("percentage", { precision: 5, scale: 2 }).notNull(), // e.g. 10.00
+        startsAt: timestamp("starts_at", { withTimezone: true }).notNull().defaultNow(),
+        endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    },
+    (table) => ({
+        productIdIdx: index("discounts_product_id_idx").on(table.productId),
+        activeRangeIdx: index("discounts_active_range_idx").on(table.startsAt, table.endsAt),
+        percentageCheck: check("discounts_percentage_check", sql`${table.percentage} > 0 and ${table.percentage} <= 100`),
+        datesCheck: check("discounts_dates_check", sql`${table.endsAt} > ${table.starts_at}`),
+    })
+);
