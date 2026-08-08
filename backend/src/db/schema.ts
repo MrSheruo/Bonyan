@@ -15,6 +15,7 @@ import {
     primaryKey,
     char,
     customType,
+    check,
 } from "drizzle-orm/pg-core";
 
 // =========================================================
@@ -31,6 +32,7 @@ export const productTier = pgEnum("product_tier", ["economy", "standard", "luxur
 export const socialPlatform = pgEnum("social_platform", ["whatsapp", "facebook", "instagram"]);
 export const addressLabel = pgEnum("address_label", ["home", "work", "other"]);
 export const maritalStatusEnum = pgEnum("marital_status", ["single", "married"]);
+export const cartStatus = pgEnum("cart_status", ["active", "converted", "abandoned"]);
 
 const tsvector = customType<{ data: string }>({
     dataType() {
@@ -73,9 +75,14 @@ export const stores = pgTable(
         deletedAt: timestamp("deleted_at", { withTimezone: true }),
         createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
         updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+        ownerId: uuid("owner_id")
+            .notNull()
+            .references(() => user.id, { onDelete: "restrict" }),
+        duplicateOf: uuid("duplicate_of").references((): any => stores.id, { onDelete: "set null" }),
     },
     (table) => ({
         cityIdx: index("stores_city_idx").on(table.city),
+        ownerIdIdx: uniqueIndex("stores_owner_id_unique_idx").on(table.ownerId),
     })
 );
 
@@ -128,6 +135,10 @@ export const products = pgTable(
     (table) => ({
         categoryIdIdx: index("products_category_id_idx").on(table.categoryId),
         searchVectorIdx: index("products_search_vector_idx").using("gin", table.searchVector),
+        createdAtIdx: index("products_created_at_idx").on(table.createdAt.desc(), table.id.desc()),
+        ratingIdIdx: index("products_rating_id_idx")
+            .on(table.rating.desc(), table.id.desc())
+            .where(sql`deleted_at IS NULL`),
     })
 );
 
@@ -164,14 +175,14 @@ export const listings = pgTable(
         inStock: boolean("in_stock").notNull().default(true),
         createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
         updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+        deletedAt: timestamp("deleted_at", { withTimezone: true }),
     },
     (table) => ({
         productIdIdx: index("listings_product_id_idx").on(table.productId),
         storeIdIdx: index("listings_store_id_idx").on(table.storeId),
-        productStoreUnique: uniqueIndex("listings_product_store_unique").on(
-            table.productId,
-            table.storeId
-        ),
+        productStoreUnique: uniqueIndex("listings_product_store_unique")
+            .on(table.productId, table.storeId)
+            .where(sql`deleted_at IS NULL`),
     })
 );
 
@@ -375,18 +386,71 @@ export const discounts = pgTable(
     "discounts",
     {
         id: uuid("id").primaryKey().defaultRandom(),
-        productId: uuid("product_id")
+        listingId: bigint("listing_id", { mode: "number" })
             .notNull()
-            .references(() => products.id, { onDelete: "cascade" }),
-        percentage: numeric("percentage", { precision: 5, scale: 2 }).notNull(), // e.g. 10.00
+            .references(() => listings.id, { onDelete: "cascade" }),
+        percentage: numeric("percentage", { precision: 5, scale: 2 }).notNull(),
         startsAt: timestamp("starts_at", { withTimezone: true }).notNull().defaultNow(),
         endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
         createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     },
     (table) => ({
-        productIdIdx: index("discounts_product_id_idx").on(table.productId),
+        listingIdIdx: index("discounts_listing_id_idx").on(table.listingId),
         activeRangeIdx: index("discounts_active_range_idx").on(table.startsAt, table.endsAt),
         percentageCheck: check("discounts_percentage_check", sql`${table.percentage} > 0 and ${table.percentage} <= 100`),
-        datesCheck: check("discounts_dates_check", sql`${table.endsAt} > ${table.starts_at}`),
+        datesCheck: check("discounts_dates_check", sql`${table.endsAt} > ${table.startsAt}`),
+    })
+);
+
+
+
+// =========================================================
+// carts
+// =========================================================
+export const carts = pgTable(
+    "carts",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        userId: uuid("user_id")
+            .notNull()
+            .references(() => user.id, { onDelete: "cascade" }),
+        status: cartStatus("status").notNull().default("active"),
+        createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+        updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    },
+    (table) => ({
+        userIdIdx: index("carts_user_id_idx").on(table.userId),
+        // enforces "one active cart per user" the same way stores.ownerId enforces
+        // "one store per user" — but partial, since a user accumulates many
+        // converted/abandoned carts over time and only the active one is unique.
+        activeUserUnique: uniqueIndex("carts_active_user_unique")
+            .on(table.userId)
+            .where(sql`status = 'active'`),
+    })
+);
+
+// =========================================================
+// cart_items
+// =========================================================
+export const cartItems = pgTable(
+    "cart_items",
+    {
+        id: bigint("id", { mode: "number" }).generatedAlwaysAsIdentity().primaryKey(),
+        cartId: uuid("cart_id")
+            .notNull()
+            .references(() => carts.id, { onDelete: "cascade" }),
+        listingId: bigint("listing_id", { mode: "number" })
+            .notNull()
+            .references(() => listings.id, { onDelete: "restrict" }),
+        quantity: integer("quantity").notNull().default(1),
+        priceAtAdd: numeric("price_at_add", { precision: 12, scale: 2 }).notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+        updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    },
+    (table) => ({
+        cartIdIdx: index("cart_items_cart_id_idx").on(table.cartId),
+        listingIdIdx: index("cart_items_listing_id_idx").on(table.listingId),
+        cartListingUnique: uniqueIndex("cart_items_cart_listing_unique").on(table.cartId, table.listingId),
+        quantityCheck: check("cart_items_quantity_check", sql`${table.quantity} > 0`),
     })
 );
