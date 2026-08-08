@@ -1,6 +1,9 @@
+import { db } from "@/db/db.js";
+import { stores } from "@/db/schema.js";
 import { auth } from "@/shared/auth.js";
 import { AuthError, ConflictError } from "@/shared/errors.js";
 import { fromNodeHeaders } from "better-auth/node";
+import { eq } from "drizzle-orm";
 import type { Request } from "express";
 
 export async function registerService(input: { email: string; password: string; name: string }) {
@@ -39,4 +42,13 @@ export async function logoutService(req: Request) {
     await auth.api.signOut({
         headers: fromNodeHeaders(req.headers),
     });
+}
+
+export async function getMe(user: { id: string; role: string;[key: string]: any }) {
+    const [store] = await db.select().from(stores).where(eq(stores.ownerId, user.id));
+
+    return {
+        user,
+        store: store ?? null,
+    };
 }

@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import { registerService, loginService, logoutService } from "./auth.service.js";
+import { registerService, loginService, logoutService, getMe } from "./auth.service.js";
 import { insertUserSchema } from "@/db/validation.js";
 import { ValidationError } from "@/shared/errors.js";
 
@@ -32,6 +32,15 @@ export async function logoutController(req: Request, res: Response, next: NextFu
     try {
         await logoutService(req);
         res.status(200).json({ message: "Logged out successfully" });
+    } catch (err) {
+        next(err);
+    }
+}
+
+export async function me(req: Request, res: Response, next: NextFunction) {
+    try {
+        const result = await getMe(req.user);
+        res.json(result);
     } catch (err) {
         next(err);
     }

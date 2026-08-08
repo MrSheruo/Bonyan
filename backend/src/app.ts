@@ -12,6 +12,10 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./shared/auth.js";
 import { errorHandler } from "./shared/middlewares/errorHandler.js";
 import authRouter from "./auth/auth.route.js";
+import productsRouter from "./products/products.route.js";
+import categoriesRouter from "./categories/categories.route.js";
+import storesRouter from "./stores/stores.route.js";
+import listingsRouter from "./listings/listings.route.js";
 
 const app = express()
 
@@ -31,6 +35,13 @@ app.all("/api/auth/*splat", toNodeHandler(auth))
 
 // Routes
 app.use("/auth", authRouter);
+
+app.use("/products", productsRouter);
+
+app.use("/categories", categoriesRouter);
+app.use("/stores", storesRouter);
+app.use("/listings", listingsRouter);
+
 app.get("/api/status", (_, res) => {
     res.send("server is working 👍")
 })
