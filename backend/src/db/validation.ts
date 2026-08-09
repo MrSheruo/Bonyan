@@ -12,7 +12,6 @@ import {
     userIntents,
     addresses,
     paymentMethods,
-    purchases,
 } from "./schema.js";
 
 // ===== categories =====
@@ -78,10 +77,3 @@ export const insertAddressSchema = createInsertSchema(addresses, {
 export const insertPaymentMethodSchema = createInsertSchema(paymentMethods, {
     last4: (s) => s.regex(/^[0-9]{4}$/, "Must be 4 digits"),
 }).omit({ createdAt: true });
-
-// ===== purchases =====
-export const insertPurchaseSchema = createInsertSchema(purchases, {
-    quantity: (s) => s.int().positive(),
-    unitPriceAtPurchase: (s) => s.refine((v) => Number(v) >= 0, "Price must be non-negative"),
-    totalPrice: (s) => s.refine((v) => Number(v) >= 0, "Price must be non-negative"),
-}).omit({ purchaseDate: true, createdAt: true });

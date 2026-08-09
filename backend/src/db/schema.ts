@@ -33,6 +33,8 @@ export const socialPlatform = pgEnum("social_platform", ["whatsapp", "facebook",
 export const addressLabel = pgEnum("address_label", ["home", "work", "other"]);
 export const maritalStatusEnum = pgEnum("marital_status", ["single", "married"]);
 export const cartStatus = pgEnum("cart_status", ["active", "converted", "abandoned"]);
+export const paymentType = pgEnum("payment_type", ["card", "cash"]);
+export const paymentStatus = pgEnum("payment_status", ["pending", "paid", "failed"]);
 
 const tsvector = customType<{ data: string }>({
     dataType() {
@@ -206,7 +208,7 @@ export const user = pgTable("user", {
     banned: boolean("banned").default(false),
     banReason: text("ban_reason"),
     banExpires: timestamp("ban_expires"),
-
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     // your application fields
     budget: numeric("budget", { precision: 12, scale: 2 }).notNull().default("0"),
     maritalStatus: maritalStatusEnum("marital_status"),
@@ -303,12 +305,13 @@ export const userIntents = pgTable(
         intentId: smallint("intent_id")
             .notNull()
             .references(() => intents.id, { onDelete: "restrict" }),
+        percentage: numeric("percentage", { precision: 5, scale: 2 }).notNull(),
     },
     (table) => ({
         pk: primaryKey({ columns: [table.userId, table.intentId] }),
+        percentageCheck: check("user_intents_percentage_check", sql`${table.percentage} > 0 and ${table.percentage} <= 100`),
     })
 );
-
 // =========================================================
 // addresses
 // =========================================================
@@ -341,6 +344,8 @@ export const paymentMethods = pgTable(
         userId: uuid("user_id")
             .notNull()
             .references(() => user.id, { onDelete: "cascade" }),
+        paymentType: paymentType("payment_type").notNull().default("cash"),
+        paymentStatus: paymentStatus("payment_status").notNull().default("pending"),
         paymobToken: text("paymob_token").notNull(),
         cardBrand: text("card_brand"),
         last4: char("last4", { length: 4 }),

@@ -120,10 +120,7 @@ export async function getStoreById(id: string) {
 
     if (!store) throw new NotFoundError("Store not found");
 
-    const socialLinks = await db
-        .select()
-        .from(storeSocialLinks)
-        .where(eq(storeSocialLinks.storeId, id));
+    const socialLinks = await getStoreSocialMediaLinks(store.id)
 
     return { ...store, socialLinks };
 }
@@ -135,5 +132,29 @@ export async function getStoreByOwnerId(ownerId: string) {
         .where(and(eq(stores.ownerId, ownerId), isNull(stores.deletedAt)));
 
     if (!store) throw new NotFoundError("Store not found for this owner");
-    return store;
+
+    const socialLinks = await getStoreSocialMediaLinks(store.id);
+    return { ...store, socialLinks };
+}
+
+export async function findStoreByOwnerId(ownerId: string) {
+    const [store] = await db
+        .select()
+        .from(stores)
+        .where(and(eq(stores.ownerId, ownerId), isNull(stores.deletedAt)));
+
+    if (!store) return null;
+
+    const socialLinks = await getStoreSocialMediaLinks(store.id);
+    return { ...store, socialLinks };
+}
+
+export async function getStoreSocialMediaLinks(storeId: string) {
+
+    const socialLinks = await db
+        .select()
+        .from(storeSocialLinks)
+        .where(eq(storeSocialLinks.storeId, storeId));
+
+    return socialLinks || [];
 }

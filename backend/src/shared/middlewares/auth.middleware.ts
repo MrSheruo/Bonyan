@@ -9,6 +9,7 @@ declare global {
         interface Request {
             user?: any;
             session?: any;
+            isDeactivated?: boolean;
         }
     }
 }
@@ -19,16 +20,22 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
             headers: fromNodeHeaders(req.headers),
         });
 
-        if (!session) {
-            throw new AuthError("Not authenticated");
-        }
+        if (!session) throw new AuthError("Not authenticated");
 
+        req.isDeactivated = !!(session.user as any).deletedAt;
         req.user = session.user;
         req.session = session.session;
         next();
     } catch (err) {
         next(err instanceof AuthError ? err : new AuthError("Not authenticated"));
     }
+}
+
+export function blockIfDeactivated(req: Request, res: Response, next: NextFunction) {
+    if (req.isDeactivated) {
+        return next(new ForbiddenError("Account is deactivated. Reactivate to continue."));
+    }
+    next();
 }
 
 export function requireRole(...allowedRoles: string[]) {

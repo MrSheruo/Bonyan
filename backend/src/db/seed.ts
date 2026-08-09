@@ -10,7 +10,10 @@ import {
     discounts,
     addresses,
     paymentMethods,
-    purchases,
+    carts,
+    cartItems,
+    orders,
+    orderItems,
 } from "./schema.js";
 import { eq } from "drizzle-orm";
 
@@ -59,6 +62,7 @@ const CITIES = ["Baghdad", "Basra", "Erbil", "Najaf", "Mosul", "Sulaymaniyah", "
 const STORE_NAMES = ["Home & Co", "The Furnish Room", "Casa Living"];
 const CARD_BRANDS = ["visa", "mastercard", "meeza"];
 const ADDRESS_LABELS = ["home", "work", "other"] as const;
+const ORDER_ITEM_STATUSES = ["pending", "confirmed", "on_the_way", "delivered", "cancelled"] as const;
 
 async function main() {
     console.log("Seeding: users via Better Auth...");
@@ -154,13 +158,13 @@ async function main() {
     });
     await db.insert(productImages).values(imageRows);
 
-    // ---------- listings (respect unique productId+storeId) ----------
+    // ---------- listings ----------
     console.log("Seeding: listings...");
     const listingPairs = new Set<string>();
     const listingRows: { productId: string; storeId: string; price: string; inStock: boolean }[] = [];
 
     for (const product of insertedProducts) {
-        const storeCount = randInt(1, insertedStores.length); // list at 1..3 stores
+        const storeCount = randInt(1, insertedStores.length);
         const chosenStores = pickMany(insertedStores, storeCount);
         for (const store of chosenStores) {
             const key = `${product.id}:${store.id}`;
@@ -182,7 +186,7 @@ async function main() {
         price: listings.price,
     });
 
-    // ---------- discounts (subset of listings, mixed active/upcoming/expired) ----------
+    // ---------- discounts ----------
     console.log("Seeding: discounts...");
     const discountTargets = pickMany(insertedListings, Math.min(40, insertedListings.length));
     const discountRows = discountTargets.map((l) => {
@@ -207,7 +211,7 @@ async function main() {
     });
     await db.insert(discounts).values(discountRows);
 
-    // ---------- addresses ----------
+    // ---------- addresses (returning — needed for order snapshots) ----------
     console.log("Seeding: addresses...");
     const ADDRESS_COUNT = 90;
     const addressRows = Array.from({ length: ADDRESS_COUNT }).map(() => ({
@@ -220,7 +224,16 @@ async function main() {
         postalCode: String(randInt(10000, 99999)),
         isDefault: Math.random() > 0.7,
     }));
-    await db.insert(addresses).values(addressRows);
+    const insertedAddresses = await db.insert(addresses).values(addressRows).returning({
+        id: addresses.id,
+        userId: addresses.userId,
+        label: addresses.label,
+        line1: addresses.line1,
+        line2: addresses.line2,
+        city: addresses.city,
+        governorate: addresses.governorate,
+        postalCode: addresses.postalCode,
+    });
 
     // ---------- payment methods ----------
     console.log("Seeding: payment methods...");
@@ -234,25 +247,80 @@ async function main() {
     }));
     await db.insert(paymentMethods).values(pmRows);
 
-    // ---------- purchases ----------
-    console.log("Seeding: purchases...");
-    const PURCHASE_COUNT = 90;
-    const purchaseRows = Array.from({ length: PURCHASE_COUNT }).map(() => {
-        const listing = pick(insertedListings);
-        const product = insertedProducts.find((p) => p.id === listing.productId)!;
-        const quantity = randInt(1, 4);
-        const unitPrice = Number(listing.price);
-        return {
-            userId: pick(buyerIds),
-            listingId: listing.id,
-            categoryId: product.categoryId,
-            quantity,
-            unitPriceAtPurchase: String(unitPrice),
-            totalPrice: String(Number((unitPrice * quantity).toFixed(2))),
-            status: pick(["pending", "confirmed", "on_the_way", "delivered", "cancelled"] as const),
-        };
+    // ---------- carts + cart_items ----------
+    console.log("Seeding: carts...");
+    const cartRows = buyerIds.map((userId) => ({ userId, status: "active" as const }));
+    const insertedCarts = await db.insert(carts).values(cartRows).returning({
+        id: carts.id,
+        userId: carts.userId,
     });
-    await db.insert(purchases).values(purchaseRows);
+
+    console.log("Seeding: cart items...");
+    const cartItemRows: {
+        cartId: string;
+        listingId: number;
+        quantity: number;
+        priceAtAdd: string;
+    }[] = [];
+
+    for (const cart of insertedCarts) {
+        const itemCount = randInt(1, 3);
+        const chosenListings = pickMany(insertedListings, itemCount);
+        for (const listing of chosenListings) {
+            cartItemRows.push({
+                cartId: cart.id,
+                listingId: listing.id,
+                quantity: randInt(1, 3),
+                priceAtAdd: listing.price, // already a string (numeric column)
+            });
+        }
+    }
+    await db.insert(cartItems).values(cartItemRows);
+
+    // ---------- orders + order_items ----------
+    console.log("Seeding: orders...");
+    const ORDER_COUNT = 20;
+
+    for (let i = 0; i < ORDER_COUNT; i++) {
+        const buyerId = pick(buyerIds);
+        const address = pick(insertedAddresses);
+
+        const [order] = await db
+            .insert(orders)
+            .values({
+                userId: buyerId,
+                cartId: null,
+                addressId: address.id,
+                addressLabel: address.label,
+                addressLine1: address.line1,
+                addressLine2: address.line2,
+                addressCity: address.city,
+                addressGovernorate: address.governorate,
+                addressPostalCode: address.postalCode,
+            })
+            .returning({ id: orders.id });
+
+        const itemCount = randInt(1, 3);
+        const chosenListings = pickMany(insertedListings, itemCount);
+
+        const orderItemRows = chosenListings.map((listing) => {
+            const product = insertedProducts.find((p) => p.id === listing.productId)!;
+            const quantity = randInt(1, 4);
+            const unitPrice = Number(listing.price);
+            return {
+                orderId: order!.id,
+                listingId: listing.id,
+                storeId: listing.storeId,
+                categoryId: product.categoryId,
+                quantity,
+                unitPriceAtPurchase: listing.price,
+                totalPrice: String(Number((unitPrice * quantity).toFixed(2))),
+                status: pick(ORDER_ITEM_STATUSES),
+            };
+        });
+
+        await db.insert(orderItems).values(orderItemRows);
+    }
 
     console.log("Seed complete.");
     console.log(`Login: any of the 7 emails above, password "${PASSWORD}"`);
