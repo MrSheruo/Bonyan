@@ -59,7 +59,7 @@ export async function createProductWithImages(input: CreateProductInput, imageBu
         const uploaded = await Promise.all(
             imageBuffers.map(async (buffer) => {
                 const compressed = await compressImage(buffer);
-                const result = await uploadImage(compressed);
+                const result = await uploadImage(compressed, "product-images");
                 uploadedPaths.push(result.path);
                 return result;
             })
@@ -67,7 +67,7 @@ export async function createProductWithImages(input: CreateProductInput, imageBu
 
         return await db.transaction((tx) => insertProductWithImages(tx, input, uploaded));
     } catch (err) {
-        await Promise.all(uploadedPaths.map((path) => deleteImage(path)));
+        await Promise.all(uploadedPaths.map((path) => deleteImage(path, "product-images")));
         throw err;
     }
 }
@@ -162,7 +162,7 @@ export async function addProductImages(productId: string, imageBuffers: Buffer[]
         const uploaded = await Promise.all(
             imageBuffers.map(async (buffer) => {
                 const compressed = await compressImage(buffer);
-                const result = await uploadImage(compressed);
+                const result = await uploadImage(compressed, "product-images");
                 uploadedPaths.push(result.path);
                 return result;
             })
@@ -180,7 +180,7 @@ export async function addProductImages(productId: string, imageBuffers: Buffer[]
             )
             .returning();
     } catch (err) {
-        await Promise.all(uploadedPaths.map((path) => deleteImage(path)));
+        await Promise.all(uploadedPaths.map((path) => deleteImage(path, "product-images")));
         throw err;
     }
 }
@@ -204,7 +204,7 @@ export async function deleteProductImage(productId: string, imageId: number, req
         throw new ConflictError("Can't delete the last image — a product must have at least one");
     }
 
-    await deleteImage(pathFromPublicUrl(image.url));
+    await deleteImage(pathFromPublicUrl(image.url, "product-images"), "product-images");
     await db.delete(productImages).where(eq(productImages.id, imageId));
 }
 

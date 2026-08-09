@@ -33,6 +33,8 @@ export const socialPlatform = pgEnum("social_platform", ["whatsapp", "facebook",
 export const addressLabel = pgEnum("address_label", ["home", "work", "other"]);
 export const maritalStatusEnum = pgEnum("marital_status", ["single", "married"]);
 export const cartStatus = pgEnum("cart_status", ["active", "converted", "abandoned"]);
+export const paymentType = pgEnum("payment_type", ["card", "cash"]);
+export const paymentStatus = pgEnum("payment_status", ["pending", "paid", "failed"]);
 
 const tsvector = customType<{ data: string }>({
     dataType() {
@@ -206,7 +208,7 @@ export const user = pgTable("user", {
     banned: boolean("banned").default(false),
     banReason: text("ban_reason"),
     banExpires: timestamp("ban_expires"),
-
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     // your application fields
     budget: numeric("budget", { precision: 12, scale: 2 }).notNull().default("0"),
     maritalStatus: maritalStatusEnum("marital_status"),
@@ -303,12 +305,13 @@ export const userIntents = pgTable(
         intentId: smallint("intent_id")
             .notNull()
             .references(() => intents.id, { onDelete: "restrict" }),
+        percentage: numeric("percentage", { precision: 5, scale: 2 }).notNull(),
     },
     (table) => ({
         pk: primaryKey({ columns: [table.userId, table.intentId] }),
+        percentageCheck: check("user_intents_percentage_check", sql`${table.percentage} > 0 and ${table.percentage} <= 100`),
     })
 );
-
 // =========================================================
 // addresses
 // =========================================================
@@ -341,6 +344,8 @@ export const paymentMethods = pgTable(
         userId: uuid("user_id")
             .notNull()
             .references(() => user.id, { onDelete: "cascade" }),
+        paymentType: paymentType("payment_type").notNull().default("cash"),
+        paymentStatus: paymentStatus("payment_status").notNull().default("pending"),
         paymobToken: text("paymob_token").notNull(),
         cardBrand: text("card_brand"),
         last4: char("last4", { length: 4 }),
@@ -349,36 +354,6 @@ export const paymentMethods = pgTable(
     },
     (table) => ({
         userIdIdx: index("payment_methods_user_id_idx").on(table.userId),
-    })
-);
-
-// =========================================================
-// purchases
-// =========================================================
-export const purchases = pgTable(
-    "purchases",
-    {
-        id: bigint("id", { mode: "number" }).generatedAlwaysAsIdentity().primaryKey(),
-        userId: uuid("user_id")
-            .notNull()
-            .references(() => user.id, { onDelete: "restrict" }),
-        listingId: bigint("listing_id", { mode: "number" })
-            .notNull()
-            .references(() => listings.id, { onDelete: "restrict" }),
-        categoryId: uuid("category_id")
-            .notNull()
-            .references(() => categories.id, { onDelete: "restrict" }),
-        quantity: integer("quantity").notNull().default(1),
-        unitPriceAtPurchase: numeric("unit_price_at_purchase", { precision: 12, scale: 2 }).notNull(),
-        totalPrice: numeric("total_price", { precision: 12, scale: 2 }).notNull(),
-        status: purchaseStatus("status").notNull().default("pending"),
-        purchaseDate: timestamp("purchase_date", { withTimezone: true }).notNull().defaultNow(),
-        createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    },
-    (table) => ({
-        userIdIdx: index("purchases_user_id_idx").on(table.userId),
-        listingIdIdx: index("purchases_listing_id_idx").on(table.listingId),
-        categoryIdIdx: index("purchases_category_id_idx").on(table.categoryId),
     })
 );
 
@@ -452,5 +427,67 @@ export const cartItems = pgTable(
         listingIdIdx: index("cart_items_listing_id_idx").on(table.listingId),
         cartListingUnique: uniqueIndex("cart_items_cart_listing_unique").on(table.cartId, table.listingId),
         quantityCheck: check("cart_items_quantity_check", sql`${table.quantity} > 0`),
+    })
+);
+
+// =========================================================
+// orders (header)
+// =========================================================
+export const orders = pgTable(
+    "orders",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        userId: uuid("user_id")
+            .notNull()
+            .references(() => user.id, { onDelete: "restrict" }),
+        cartId: uuid("cart_id").references(() => carts.id, { onDelete: "set null" }),
+        addressId: bigint("address_id", { mode: "number" }).references(() => addresses.id, {
+            onDelete: "set null",
+        }),
+        addressLabel: addressLabel("address_label"),
+        addressLine1: text("address_line1").notNull(),
+        addressLine2: text("address_line2"),
+        addressCity: text("address_city").notNull(),
+        addressGovernorate: text("address_governorate"),
+        addressPostalCode: text("address_postal_code"),
+        createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    },
+    (table) => ({
+        userIdIdx: index("orders_user_id_idx").on(table.userId),
+    })
+);
+
+// =========================================================
+// order_items (line items — status per store here)
+// =========================================================
+export const orderItems = pgTable(
+    "order_items",
+    {
+        id: bigint("id", { mode: "number" }).generatedAlwaysAsIdentity().primaryKey(),
+        orderId: uuid("order_id")
+            .notNull()
+            .references(() => orders.id, { onDelete: "cascade" }),
+        listingId: bigint("listing_id", { mode: "number" })
+            .notNull()
+            .references(() => listings.id, { onDelete: "restrict" }),
+        storeId: uuid("store_id")
+            .notNull()
+            .references(() => stores.id, { onDelete: "restrict" }),
+        categoryId: uuid("category_id")
+            .notNull()
+            .references(() => categories.id, { onDelete: "restrict" }),
+        quantity: integer("quantity").notNull().default(1),
+        unitPriceAtPurchase: numeric("unit_price_at_purchase", { precision: 12, scale: 2 }).notNull(),
+        totalPrice: numeric("total_price", { precision: 12, scale: 2 }).notNull(),
+        status: purchaseStatus("status").notNull().default("pending"),
+        createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+        updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    },
+    (table) => ({
+        orderIdIdx: index("order_items_order_id_idx").on(table.orderId),
+        listingIdIdx: index("order_items_listing_id_idx").on(table.listingId),
+        storeIdIdx: index("order_items_store_id_idx").on(table.storeId),
+        categoryIdIdx: index("order_items_category_id_idx").on(table.categoryId),
+        quantityCheck: check("order_items_quantity_check", sql`${table.quantity} > 0`),
     })
 );
