@@ -1,0 +1,12 @@
+python-dotenv
+langchain
+langchain-google-genai
+google-genai
+pandas
+numpy
+fastapi
+uvicorn
+streamlit
+langchain-core
+langchain-pinecone
+openpyxl

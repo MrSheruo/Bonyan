@@ -1,0 +1,14 @@
+.env
+__pycache__/
+*.pyc
+*.pkl
+*.db
+*.sqlite3
+.vectorstore/
+.env.*
+venv/
+bonyan-model/
+.vscode/
+/node_modules
+*.json
+
