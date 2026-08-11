@@ -99,4 +99,10 @@ bonyan/
 │   ├── js/                  # Frontend scripts & logic
 │   ├── lib/                 # Third-party libraries & dependencies
 │   └── index.html           # Main frontend entry point
+├── AI/
+│   ├── data/                # Model's data
+│   ├── .gitignore           # Git ignore config
+│   ├── final_api.py         # Model's API 
+│   ├── pipeline.py          # Pipeline for uploading documents
+│   └── requirements.txt     # Required packages for the model
 └── readme.md                # Project main documentation
