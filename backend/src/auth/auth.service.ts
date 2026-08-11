@@ -44,11 +44,3 @@ export async function logoutService(req: Request) {
     });
 }
 
-export async function getMe(user: { id: string; role: string;[key: string]: any }) {
-    const [store] = await db.select().from(stores).where(eq(stores.ownerId, user.id));
-
-    return {
-        user,
-        store: store ?? null,
-    };
-}

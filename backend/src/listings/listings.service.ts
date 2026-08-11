@@ -35,7 +35,7 @@ async function assertNoDuplicateListing(productId: string, storeId: string) {
     }
 }
 
-async function getOwnStore(userId: string) {
+export async function getOwnStore(userId: string) {
     const [store] = await db
         .select()
         .from(stores)
@@ -92,7 +92,7 @@ export async function createListing(
             uploaded = await Promise.all(
                 imageBuffers.map(async (buffer) => {
                     const compressed = await compressImage(buffer);
-                    const result = await uploadImage(compressed);
+                    const result = await uploadImage(compressed, "product-images");
                     uploadedPaths.push(result.path);
                     return result;
                 })
@@ -120,7 +120,7 @@ export async function createListing(
             return listing;
         });
     } catch (err) {
-        await Promise.all(uploadedPaths.map((path) => deleteImage(path)));
+        await Promise.all(uploadedPaths.map((path) => deleteImage(path, "product-images")));
         throw err;
     }
 }
@@ -181,7 +181,7 @@ export async function restoreListing(id: number, requester: { id: string }) {
     }
 }
 
-async function getActiveDiscount(listingId: number) {
+export async function getActiveDiscount(listingId: number) {
     const [discount] = await db
         .select()
         .from(discounts)
@@ -195,7 +195,7 @@ async function getActiveDiscount(listingId: number) {
     return discount ?? null;
 }
 
-function withEffectivePrice(price: string, discount: { percentage: string } | null) {
+export function withEffectivePrice(price: string, discount: { percentage: string } | null) {
     const base = Number(price);
     if (!discount) return { effectivePrice: base, hasDiscount: false };
     const effectivePrice = Number((base * (1 - Number(discount.percentage) / 100)).toFixed(2));
