@@ -1,37 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <title>Bonyan</title>
 </head>
+
 <body class="bg-[#FFFDF7]">
-    <!-- Header -->
-    <header id="main-header" class=" flex h-16 w-full shadow-md sticky top-0 z-50 justify-between items-center bg-[#FFFDF7] p-8">
-        <h1 class="text-[#675516] font-semibold text-3xl">BONYAN</h1>
-        <nav>
-            <ul class="flex gap-6 text-[#524310] font-semibold ml-[100px]">
-                <li><a href="/home" data-link class="inline-block transition-transform duration-300 hover:scale-105">Home</a></li>
-                <li><a href="/wedding" data-link  class="inline-block transition-transform duration-300 hover:scale-105">Unique Wedding</a></li>
-                <li><a href="/fashion" data-link class="inline-block transition-transform duration-300 hover:scale-105">Fashion Home</a></li>
-                <li><a href="/budget" data-link class="inline-block transition-transform duration-300 hover:scale-105">Budget Plan</a></li>
-            </ul>
-        </nav>
-        <div class="relative h-[34px] mr-[-140px]">
-            <input type="search" placeholder="search..." class="border w-[300px] py-1 px-2 input-search border-1 [border-image:linear-gradient(to_right,#675516,#CCAB44)_1] rounded-xl outline-none focus:border-2 ">
-            <svg xmlns="http://www.w3.org/2000/svg" class="absolute top-1 left-[274px] text-[#675516]" width="16" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search-icon lucide-search"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
-        </div>
-        <div id="links" class="flex gap-4 h-7">
-            <a href="/signin" data-link id="link_login" class="font-semibold text-[#675516] inline-block transition-transform duration-300 hover:scale-105">Sign In</a>
-            <a href="/cart" data-link class="inline-block transition-transform duration-300 hover:scale-105"><svg xmlns="http://www.w3.org/2000/svg" class="text-[#675516]" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shopping-basket-icon lucide-shopping-basket"><path d="m15 11-1 9"/><path d="m19 11-4-7"/><path d="M2 11h20"/><path d="m3.5 11 1.6 7.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6l1.7-7.4"/><path d="M4.5 15.5h15"/><path d="m5 11 4-7"/><path d="m9 11 1 9"/></svg></a>
-            <a href="/chatbot" data-link class="text-xl text-[#675516] inline-block transition-transform duration-300 hover:scale-105"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bot-message-square-icon lucide-bot-message-square"><path d="M12 6V2H8"/><path d="M15 11v2"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="M20 16a2 2 0 0 1-2 2H8.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 4 20.286V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/><path d="M9 11v2"/></svg></a>
-        </div>
-    </header>
+    <div id="header-root"></div>
     <section id="content" class="flex flex-col gap-4  w-full m-auto"></section>
-    
-    <script src="js/script.js"></script>
+
+    <script type="module" src="./js/main.js"></script>
 </body>
+
 </html>

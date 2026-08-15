@@ -1,0 +1,25 @@
+{
+  "name": "bonyan",
+  "version": "1.0.0",
+  "description": "> **A smart budget planning platform for home finishing and furnishing.**",
+  "main": "index.js",
+  "workspaces": ["backend", "frontend"],
+    "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev -w backend\" \"npm run dev -w frontend\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MrSheruo/Bonyan.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/MrSheruo/Bonyan/issues"
+  },
+  "homepage": "https://github.com/MrSheruo/Bonyan#readme",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

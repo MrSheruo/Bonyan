@@ -298,3 +298,11 @@ export async function listProducts(query: GetProductsQuery) {
         nextCursor,
     };
 }
+
+export async function getProductImages(productId: string) {
+    return db
+        .select({ url: productImages.url, isPrimary: productImages.isPrimary })
+        .from(productImages)
+        .where(eq(productImages.productId, productId))
+        .orderBy(productImages.sortOrder);
+}

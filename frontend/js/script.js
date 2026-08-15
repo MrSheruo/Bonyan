@@ -1,16 +1,17 @@
-const routes = {
+// ./js/script.js
+export const routes = {
     "/home": `
     <!-- sec1 -->
     <div class="w-[95vw] m-auto"> 
-        <div class="flex gap-4 w-full h-[85vh] mt-[40px]">
+        <div class="flex gap-4 w-full h-[85vh] mt-10">
             <div class="bg-[url('./Assest/photo1.jpg')] bg-cover bg-center bg-no-repeat h-[80vh] w-3/5 rounded-2xl">
-                <div class="bg-black/25 h-[80vh] w-full rounded-2xl pt-[200px] px-12">
+                <div class="bg-black/25 h-[80vh] w-full rounded-2xl pt-50 px-12">
                     <h2 class="text-white text-5xl leading-relaxed">Making your house <br> feel like home</h2>
-                    <button class="bg-[#D6C284] text-white rounded-2xl py-2 px-4 text-2xl mt-[50px] hover:bg-[#9B864A] transition duration-300">Start your Journey</button>
+                    <button class="bg-[#D6C284] text-white rounded-2xl py-2 px-4 text-2xl mt-12.5 hover:bg-[#9B864A] transition duration-300">Start your Journey</button>
                 </div>
             </div>
             <div class="bg-[url('./Assest/photo2.jpg')] bg-cover bg-center bg-no-repeat h-[80vh] w-2/5 rounded-2xl">
-                <div class="bg-white/25 h-[80vh] w-full rounded-2xl pt-[470px] px-5">
+                <div class="bg-white/25 h-[80vh] w-full rounded-2xl pt-117.5 px-5">
                     <h2 class="text-black text-4xl">Where your happily ever <br> after begins</h2>
                 </div>
             </div>
@@ -113,15 +114,15 @@ const routes = {
             </div>
             <div class="w-full flex gap-4 h-[15vh]">
                 <div class="w-1/3 flex flex-col gap-2 h-[15vh]">
-                    <img src="" alt="" class="w-3/4 h-[100%]">
+                    <img src="" alt="" class="w-3/4 h-full">
                     <h3 class="text-center text-xl"></h3>
                 </div>
                 <div class="w-1/3 flex flex-col gap-2 h-[15vh]">
-                    <img src="" alt="" class="w-3/4 h-[100%]">
+                    <img src="" alt="" class="w-3/4 h-full">
                     <h3 class="text-center text-xl"></h3>
                 </div>
                 <div class="w-1/3 flex flex-col gap-2 h-[15vh]">
-                    <img src="" alt="" class="w-3/4 h-[100%]">
+                    <img src="" alt="" class="w-3/4 h-full">
                     <h3 class="text-center text-xl"></h3>
                 </div>  
             </div>
@@ -510,7 +511,7 @@ const routes = {
     </div>
     `, /////////////////////////////////////
     "/signin": `
-        <div class="w-full h-[100vh] relative">
+        <div class="w-full h-screen relative">
             <div class="absolute w-4/5 h-[80vh] rounded-3xl top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 bg-white flex shadow-md">
                 <div class=" w-2/5 h-[80vh] rounded-bl-3xl rounded-tl-3xl bg-[url('./Assest/logphoto.jpg')] bg-cover bg-center bg-no-repeat"></div>
                 <div class="w-3/5 h-[80vh] p-24 text-center flex flex-col gap-6">
@@ -528,7 +529,7 @@ const routes = {
         </div>
     `,/////////////////////
     "/signup": `
-        <div class="w-full h-[100vh] relative">
+        <div class="w-full h-screen relative">
             <div class="absolute w-4/5 h-[80vh] rounded-3xl top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 bg-white flex shadow-md">
                 <div class="w-2/5 h-[80vh] rounded-bl-3xl rounded-tl-3xl bg-[url('./Assest/signupphoto.jpg')] bg-cover bg-center bg-no-repeat">            </div>
                 <div class="w-3/5 h-[80vh] p-8 text-center flex flex-col gap-6">
@@ -1306,54 +1307,3 @@ const routes = {
     "/wedding": `<h1 class="text-3xl p-8 text-center">Coming Soon  </h1>`,
     "/budget":`<h1 class="text-3xl p-8 text-center">Coming Soon  </h1>` 
 };
-///////////////////////////////////////////////////////////
-function router() {
-    let path = window.location.pathname;
-    if(path ==="/" || path===""){
-        history.replaceState(null,null,"/home");
-        path="/home"
-    }
-    const html = routes[path] || "<h1>Page Not Found 404 </h1>";
-    document.getElementById("content").innerHTML = html;
-
-    const header=document.getElementById("main-header");
-    if(path==="/signup" || path==="/signin"){
-        if(header) header.classList.add("hidden");
-    }
-    else{
-        if(header) header.classList.remove("hidden");
-    }
-
-    const navlinks= document.querySelectorAll("[data-link]");
-    navlinks.forEach(link =>{
-        const hrefvalue= link.getAttribute("href");
-        if(path===hrefvalue || path.includes(hrefvalue)){
-            link.classList.add("border-b-2" , "border-[#524310]" ,"font-bold" , "pb-1" ,"px-1");
-        }
-        else{
-            link.classList.remove("border-b-2" , "border-[#524310]" ,"font-bold" , "pb-1" ,"px-1");
-        }
-    });
-}
-function navigateTo(url) {
-    window.history.pushState(null, null, url);
-    router();
-}
-document.addEventListener("DOMContentLoaded", () => {
-    document.body.addEventListener("click", (e) => {
-        const link=e.target.closest("[data-link]");
-        if (link) {
-            e.preventDefault();
-            navigateTo(link.href);
-        }
-    });
-    router();
-});
-window.addEventListener("popstate", router);
-/////////////////////////////////////////////////////
-//signin//
-
-//signup//
-
-
-////////////////////////////////////////////////////////////////////////////////
