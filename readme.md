@@ -102,7 +102,8 @@ bonyan/
 ├── AI/
 │   ├── data/                # Model's data
 │   ├── .gitignore           # Git ignore config
-│   ├── final_api.py         # Model's API 
+│   ├── api.py               # Model's API 
 │   ├── pipeline.py          # Pipeline for uploading documents
-│   └── requirements.txt     # Required packages for the model
+│   ├── requirements.txt     # Required packages for the model
+|   └── Dockerfile           # Dockerfile for Railway deployment
 └── readme.md                # Project main documentation
