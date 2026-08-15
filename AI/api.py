@@ -31,8 +31,8 @@ class QueryResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Step 1 (instructions.docx): user preferences (budget, categories, weights,
-# tier) come pre-structured from the backend / Node.js layer as JSON. This
+# Step 1: user preferences (budget, categories, weights,
+# tier) come pre-structured from the backend layer as JSON. This
 # validates/normalizes that data and synthesizes the text query that the
 # retrieval step will embed for semantic search (structured fields alone
 # carry no free text, so a query string is generated from them; any optional
@@ -120,7 +120,7 @@ def extract_user_preferences(data: Any) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Step 2 (instructions.docx): budget allocation across categories
+# Step 2: budget allocation across categories
 # ---------------------------------------------------------------------------
 def budget_allocation(
     budget: float,
@@ -162,7 +162,7 @@ def budget_allocation(
 
 
 # ---------------------------------------------------------------------------
-# Step 3 (instructions.docx): filter data via Pinecone metadata filtering +
+# Step 3: filter data via Pinecone metadata filtering +
 # semantic search, matching category, tier, and staying within that
 # category's allocated budget. Called once per category since each category
 # has its own budget.
@@ -225,8 +225,7 @@ def extract_llm_text(message) -> str:
 
     Newer "thinking" models (e.g. Gemini 3.x) can return `message.content`
     as a list of content blocks (e.g. reasoning/thought blocks plus text
-    blocks) instead of a plain string, so `.content.strip()` alone can
-    raise AttributeError. This normalizes both shapes to a single string.
+    blocks) instead of a plain string, so this normalizes both shapes to a single string.
     """
     content = message.content
 
@@ -248,7 +247,7 @@ def extract_llm_text(message) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Step 4 (instructions.docx): content-based, constraint-driven ranking
+# Step 4: content-based, constraint-driven ranking
 # (category/budget/tier already enforced by the Pinecone filter above;
 # this ranks the survivors by tier-match then rating).
 # ---------------------------------------------------------------------------
@@ -263,7 +262,7 @@ def rank_products(docs: List[Document], tier: Optional[str] = None) -> List[Docu
 
 
 # ---------------------------------------------------------------------------
-# Step 5 (instructions.docx): build product combinations per category whose
+# Step 5: build product combinations per category whose
 # total price doesn't exceed that category's (or the overall) budget.
 # ---------------------------------------------------------------------------
 def generate_combinations(
