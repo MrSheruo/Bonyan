@@ -23,7 +23,6 @@
   "dependencies": {
     "@faker-js/faker": "^10.5.0",
     "@supabase/server": "^1.4.1",
-    "@types/node": "^26.1.2",
     "argon2": "^0.45.1",
     "better-auth": "^1.6.26",
     "compression": "^1.8.1",
@@ -42,6 +41,7 @@
     "postgres": "^3.4.9",
     "sharp": "^0.35.3",
     "typescript": "^7.0.2",
+    "xlsx": "^0.18.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -53,6 +53,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.10",
     "@types/multer": "^2.2.0",
+    "@types/node": "^26.2.0",
     "@types/nodemailer": "^8.0.1",
     "@types/sharp": "^0.31.1",
     "@types/supertest": "^7.2.1",

@@ -1,5 +1,7 @@
+import * as XLSX from "xlsx";
+import fs from "node:fs";
+
 import { db } from "./db.js";
-import { auth } from "@/shared/auth.js";
 import { supabaseAdmin } from "@/shared/supabase.js";
 import {
   user,
@@ -8,13 +10,10 @@ import {
   productImages,
   stores,
   listings,
-  addresses,
-  carts,
-  cartItems,
 } from "./schema.js";
-import { eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
-const PASSWORD = "test0123";
+// ---------- config ----------
 const BUCKET = "product-images";
 const IMAGE_FILES = Array.from(
   { length: 12 },
@@ -27,221 +26,232 @@ function randInt(min: number, max: number) {
 function pick<T>(arr: T[]): T {
   return arr[randInt(0, arr.length - 1)]!;
 }
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
 function getImageUrls(): string[] {
-  return IMAGE_FILES.map((file) => {
-    const { data } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(file);
-    return data.publicUrl;
-  });
+  return IMAGE_FILES.map(
+    (f) => supabaseAdmin.storage.from(BUCKET).getPublicUrl(f).data.publicUrl,
+  );
 }
 
-const TABLE_PRODUCTS = [
-  {
-    name: "Nordic Dining Table",
-    brand: "IKEA",
-    material: "Solid Pine",
-    color: "White",
-    size: "Medium (4-seater)",
-    desc: "Minimalist Scandinavian dining table with clean lines.",
+const TIER_MAP: Record<string, "economy" | "standard" | "luxury"> = {
+  اقتصادية: "economy",
+  متوسطة: "standard",
+  فاخرة: "luxury",
+};
+
+// ---------- category-aware attribute pools ----------
+const POOLS: Record<
+  string,
+  { brand: string[]; material: string[]; color: string[]; size: string[] }
+> = {
+  أرضيات: {
+    brand: ["كليوباترا", "الجوهرة", "لوتس", "روكا", "الفراعنة للسيراميك"],
+    material: ["سيراميك", "بورسلين", "رخام طبيعي", "باركيه خشبي"],
+    color: ["بيج", "رمادي", "أبيض", "بني", "أسود"],
+    size: ["30x30 سم", "60x60 سم", "80x80 سم", "غير مقاس"],
   },
-  {
-    name: "Harrison Extendable Table",
-    brand: "West Elm",
-    material: "Oak Wood",
-    color: "Walnut",
-    size: "Large (6-seater)",
-    desc: "Extendable oak table, seats up to 8 when open.",
+  دهانات: {
+    brand: ["جوتن", "الحليج", "سيبا", "دهانات الأهرام"],
+    material: ["بلاستيك مطفي", "دهان زيتي", "دهان قطيفة"],
+    color: ["أبيض", "بيج فاتح", "أزرق سماوي", "رمادي فاتح", "أخضر فاتح"],
+    size: ["3.6 لتر", "9 لتر", "18 لتر"],
   },
-  {
-    name: "Marlow Round Table",
-    brand: "Article",
-    material: "Solid Pine",
-    color: "Oak",
-    size: "Small (2-seater)",
-    desc: "Compact round table, perfect for small dining rooms.",
+  أثاث: {
+    brand: [
+      "المعتز للأثاث",
+      "دلتا للأثاث",
+      "هوم سنتر ستايل",
+      "المستقبل للأثاث",
+    ],
+    material: ["خشب MDF", "خشب زان", "خشب صنوبر", "معدن وخشب"],
+    color: ["بني", "بيج", "رمادي", "كحلي", "أبيض"],
+    size: ["مقعدين", "3 مقاعد", "طقم غرفة كاملة"],
   },
-  {
-    name: "Elston Glass Top Table",
-    brand: "CB2",
-    material: "Tempered Glass",
-    color: "Black",
-    size: "Medium (4-seater)",
-    desc: "Modern glass-top table with a matte black steel frame.",
+  كهربا: {
+    brand: ["السويدي إليكتريك", "شنايدر ستايل", "الأهرام للكهرباء"],
+    material: ["نحاس نقي", "ألومنيوم", "بلاستيك مقوى ضد الحريق"],
+    color: ["أبيض", "أسود", "فضي"],
+    size: ["قياس قياسي"],
   },
-  {
-    name: "Rustic Farmhouse Table",
-    brand: "Ashley Furniture",
-    material: "Oak Wood",
-    color: "Walnut",
-    size: "Large (6-seater)",
-    desc: "Farmhouse-style table with a distressed wood finish.",
+  مطابخ: {
+    brand: ["الأمل للنجارة", "هاي كلاس كيتشن", "مودرن كيتشن"],
+    material: ["أكريليك", "HPL", "خشب سويدي", "ألوميتال", "خشمونيوم"],
+    color: ["أبيض", "رمادي", "بني خشبي", "أسود مطفي"],
+    size: ["3 متر", "4 متر", "5 متر", "6 متر"],
   },
-  {
-    name: "Marble Coffee Table",
-    brand: "West Elm",
-    material: "Marble",
-    color: "White",
-    size: "Small (2-seater)",
-    desc: "Elegant marble-top coffee table with brass legs.",
+  سباكة: {
+    brand: ["هيبا", "الفراعنة للسباكة", "سيراميكا"],
+    material: ["نحاس", "PPR", "ستانلس ستيل"],
+    color: ["أبيض", "كروم", "ستانلس"],
+    size: ["1/2 بوصة", "3/4 بوصة", "1 بوصة"],
   },
-  {
-    name: "Industrial Console Table",
-    brand: "Wayfair",
-    material: "Steel & Glass",
-    color: "Black",
-    size: "Small (2-seater)",
-    desc: "Industrial-style console table with a steel frame.",
-  },
-  {
-    name: "Kensington Dining Table",
-    brand: "Ashley Furniture",
-    material: "Oak Wood",
-    color: "Grey",
-    size: "Extra Large (8-seater)",
-    desc: "Large family dining table, seats up to 10.",
-  },
-  {
-    name: "Copenhagen Side Table",
-    brand: "IKEA",
-    material: "Solid Pine",
-    color: "White",
-    size: "Small (2-seater)",
-    desc: "Simple side table, great next to a sofa or bed.",
-  },
-  {
-    name: "Milano Marble Dining Table",
-    brand: "CB2",
-    material: "Marble",
-    color: "White",
-    size: "Large (6-seater)",
-    desc: "Statement dining table with a genuine marble top.",
-  },
+};
+
+const EGYPTIAN_NAMES = [
+  "محمد سعيد",
+  "أحمد فتحي",
+  "خالد إبراهيم",
+  "مصطفى جمال",
+  "طارق سمير",
+  "هاني عادل",
+  "وليد فؤاد",
+  "شريف ماهر",
+  "عمرو صلاح",
+  "كريم رأفت",
 ];
 
 async function main() {
-  console.log("Seeding: 3 real users...");
-  const userSpecs = [
-    { name: "Ahmed Salah", email: "ahmed.salah@example.com" },
-    { name: "Mariam Hassan", email: "mariam.hassan@example.com" },
-    { name: "Youssef Adel", email: "youssef.adel@example.com" },
+  const buf = fs.readFileSync("./src/db/Bonyan.xlsx");
+  const wb = XLSX.read(buf, { type: "buffer" });
+  const rows: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]!]!);
+  // ---------- 1. categories ----------
+  const catNames = [...new Set(rows.map((r) => r.Category))];
+  await db
+    .insert(categories)
+    .values(catNames.map((name) => ({ name })))
+    .onConflictDoNothing();
+  const catRows = await db.select().from(categories);
+  const catMap = new Map(catRows.map((c) => [c.name, c.id]));
+
+  // ---------- 2. stores (+ fake owner users, direct insert) ----------
+  const storeKeys = [
+    ...new Map(rows.map((r) => [`${r.Supplier_Name}||${r.City}`, r])).values(),
   ];
 
-  const seededUsers: { id: string }[] = [];
-  for (const spec of userSpecs) {
-    const result = await auth.api.signUpEmail({
-      body: { email: spec.email, password: PASSWORD, name: spec.name },
-    });
-    await db
-      .update(user)
-      .set({ role: "user" })
-      .where(eq(user.id, result.user.id));
-    seededUsers.push({ id: result.user.id });
-    console.log(`  created ${spec.email}`);
-  }
+  const ownerRows = await db
+    .insert(user)
+    .values(
+      storeKeys.map((_, i) => ({
+        name: pick(EGYPTIAN_NAMES),
+        email: `owner${Date.now()}${i}@bonyan-import.local`,
+        emailVerified: true,
+        role: "user",
+      })),
+    )
+    .returning({ id: user.id });
 
-  console.log("Seeding: Tables category...");
-  const [tablesCategory] = await db
-    .insert(categories)
-    .values({ name: "Tables", imageUrl: null })
-    .returning({ id: categories.id });
-
-  console.log("Seeding: 1 store...");
-  const [store] = await db
+  const storeInsertValues = storeKeys.map((r, i) => ({
+    name: r.Supplier_Name,
+    city: r.City,
+    location: null,
+    ownerName: pick(EGYPTIAN_NAMES),
+    contactNumber: `01${randInt(0, 2)}${String(randInt(0, 99999999)).padStart(8, "0")}`,
+    verified: Math.random() > 0.3,
+    ownerId: ownerRows[i]!.id,
+  }));
+  const storeRows = await db
     .insert(stores)
-    .values({
-      name: "Home & Co",
-      city: "Cairo",
-      location: "Cairo District 5",
-      ownerName: "Store Owner",
-      contactNumber: "+20 100 000 0000",
-      verified: true,
-      ownerId: seededUsers[0]!.id,
-    })
-    .returning({ id: stores.id });
-
-  console.log("Seeding: table products...");
-  const insertedProducts = await db
-    .insert(products)
-    .values(
-      TABLE_PRODUCTS.map((p) => ({
-        name: p.name,
-        categoryId: tablesCategory!.id,
-        brand: p.brand,
-        rawMaterial: p.material,
-        color: p.color,
-        size: p.size,
-        unit: "piece",
-        tier: pick(["economy", "standard", "luxury"] as const),
-        description: p.desc,
-        rating: (Math.round((3.5 + Math.random() * 1.4) * 10) / 10).toFixed(1),
-      })),
-    )
-    .returning({ id: products.id });
-
-  console.log("Seeding: product images (random from Supabase bucket)...");
-  const imageUrls = getImageUrls();
-  await db.insert(productImages).values(
-    insertedProducts.map((p) => ({
-      productId: p.id,
-      url: pick(imageUrls),
-      isPrimary: true,
-      sortOrder: 0,
-    })),
+    .values(storeInsertValues)
+    .returning({ id: stores.id, name: stores.name, city: stores.city });
+  const storeMap = new Map(
+    storeRows.map((s) => [`${s.name}||${s.city}`, s.id]),
   );
 
-  console.log("Seeding: listings...");
-  const insertedListings = await db
-    .insert(listings)
-    .values(
-      insertedProducts.map((p) => ({
-        productId: p.id,
-        storeId: store!.id,
-        price: String(randInt(80, 900)),
-        inStock: true,
-      })),
-    )
-    .returning({ id: listings.id, price: listings.price });
-
-  console.log("Seeding: addresses...");
-  await db.insert(addresses).values(
-    seededUsers.map((u) => ({
-      userId: u.id,
-      label: "home" as const,
-      line1: `${randInt(1, 100)} Tahrir St`,
-      city: "Cairo",
-      governorate: "Cairo",
-      postalCode: "11511",
-      isDefault: true,
-    })),
-  );
-
-  console.log("Seeding: carts + cart items...");
-  for (const u of seededUsers) {
-    const [cart] = await db
-      .insert(carts)
-      .values({ userId: u.id, status: "active" })
-      .returning({ id: carts.id });
-
-    const items = [pick(insertedListings), pick(insertedListings)];
-    for (const item of items) {
-      await db
-        .insert(cartItems)
-        .values({
-          cartId: cart!.id,
-          listingId: item.id,
-          quantity: randInt(1, 2),
-          priceAtAdd: item.price,
-        })
-        .onConflictDoNothing();
+  // ---------- 3. products (distinct name+category+tier, rating averaged) ----------
+  const productGroups = new Map<
+    string,
+    {
+      name: string;
+      category: string;
+      tier: string;
+      unit: string;
+      ratings: number[];
     }
+  >();
+  for (const r of rows) {
+    const key = `${r.Product_Name}||${r.Category}||${r.Tier}`;
+    if (!productGroups.has(key)) {
+      productGroups.set(key, {
+        name: r.Product_Name,
+        category: r.Category,
+        tier: r.Tier,
+        unit: r.Unit,
+        ratings: [],
+      });
+    }
+    productGroups.get(key)!.ratings.push(r.Rating);
   }
 
-  console.log("Seed complete.");
-  console.log(`Login: any of the 3 emails above, password "${PASSWORD}"`);
+  const productEntries = [...productGroups.entries()];
+  const productInsertValues = productEntries.map(([, g]) => {
+    const pool = POOLS[g.category]!;
+    const avgRating = (
+      g.ratings.reduce((a, b) => a + b, 0) / g.ratings.length
+    ).toFixed(1);
+    return {
+      name: g.name,
+      categoryId: catMap.get(g.category)!,
+      brand: pick(pool.brand),
+      rawMaterial: pick(pool.material),
+      color: pick(pool.color),
+      size: pick(pool.size),
+      unit: g.unit,
+      tier: TIER_MAP[g.tier]!,
+      description: `${g.name} - خامة ${pick(pool.material)} بجودة ${g.tier === "فاخرة" ? "ممتازة" : g.tier === "متوسطة" ? "جيدة" : "اقتصادية"}.`,
+      rating: avgRating,
+    };
+  });
+
+  const productRows = await db
+    .insert(products)
+    .values(productInsertValues)
+    .returning({ id: products.id, name: products.name, tier: products.tier });
+  // map back using same order as productEntries
+  const productIdMap = new Map<string, number extends never ? never : any>();
+  productEntries.forEach(([key], i) =>
+    productIdMap.set(key, productRows[i]!.id),
+  );
+
+  // ---------- 4. product images ----------
+  const imageUrls = getImageUrls();
+  for (const batch of chunk(productRows, 300)) {
+    await db.insert(productImages).values(
+      batch.map((p) => ({
+        productId: p.id,
+        url: pick(imageUrls),
+        isPrimary: true,
+        sortOrder: 0,
+      })),
+    );
+  }
+
+  // ---------- 5. listings (aggregate duplicate product+store rows by mean price) ----------
+  const listingGroups = new Map<
+    string,
+    { productKey: string; storeKey: string; prices: number[] }
+  >();
+  for (const r of rows) {
+    const productKey = `${r.Product_Name}||${r.Category}||${r.Tier}`;
+    const storeKey = `${r.Supplier_Name}||${r.City}`;
+    const key = `${productKey}###${storeKey}`;
+    if (!listingGroups.has(key))
+      listingGroups.set(key, { productKey, storeKey, prices: [] });
+    listingGroups.get(key)!.prices.push(r.Price_EGP);
+  }
+
+  const listingInsertValues = [...listingGroups.values()].map((g) => ({
+    productId: productIdMap.get(g.productKey)!,
+    storeId: storeMap.get(g.storeKey)!,
+    price: (g.prices.reduce((a, b) => a + b, 0) / g.prices.length).toFixed(2),
+    inStock: Math.random() > 0.15,
+  }));
+
+  for (const batch of chunk(listingInsertValues, 300)) {
+    await db.insert(listings).values(batch).onConflictDoNothing();
+  }
+
+  console.log(
+    `Done: ${catRows.length} categories, ${storeRows.length} stores, ${productRows.length} products, ${listingInsertValues.length} listings.`,
+  );
 }
 
 main()
   .then(() => process.exit(0))
   .catch((err) => {
-    console.error("Seed failed:", err);
+    console.error("Import failed:", err);
     process.exit(1);
   });

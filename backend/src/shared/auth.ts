@@ -11,6 +11,10 @@ export const auth = betterAuth({
         requireEmailVerification: false,
     },
 
+    session: {
+        expiresIn: 60 * 60 * 24 * 7,
+    },
+
     // socialProviders: {
     //     google: {
     //         clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -22,10 +26,9 @@ export const auth = betterAuth({
     //     },
     // },
 
-    // add frontend origin later
-    // trustedOrigins: [
-    //     "",
-    // ],
+    trustedOrigins: [
+        "http://localhost:3000",
+    ],
 
     advanced: {
         database: {

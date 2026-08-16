@@ -29,6 +29,7 @@ import type {
   UpdateDiscountInput,
 } from "./listings.validation.js";
 import { isProductExist } from "@/products/products.check.js";
+import { inArray } from "drizzle-orm";
 
 async function assertNoDuplicateListing(productId: string, storeId: string) {
   const [existing] = await db
@@ -395,4 +396,58 @@ export async function getListingsForProduct(productId: string) {
       };
     }),
   );
+}
+
+export async function getListingsForProducts(productIds: string[]) {
+  if (productIds.length === 0)
+    return new Map<
+      string,
+      ReturnType<typeof withEffectivePrice> & Record<string, any>
+    >();
+
+  const rows = await db
+    .select({
+      listing: listings,
+      store: { id: stores.id, name: stores.name, city: stores.city },
+    })
+    .from(listings)
+    .innerJoin(stores, eq(listings.storeId, stores.id))
+    .where(
+      and(inArray(listings.productId, productIds), isNull(listings.deletedAt)),
+    );
+
+  const listingIds = rows.map((r) => r.listing.id);
+
+  const activeDiscounts = listingIds.length
+    ? await db
+        .select()
+        .from(discounts)
+        .where(
+          and(
+            inArray(discounts.listingId, listingIds),
+            lte(discounts.startsAt, new Date()),
+            gte(discounts.endsAt, new Date()),
+          ),
+        )
+    : [];
+
+  const discountByListingId = new Map(
+    activeDiscounts.map((d) => [d.listingId, d]),
+  );
+
+  const byProductId = new Map<string, any[]>();
+  for (const { listing, store } of rows) {
+    const discount = discountByListingId.get(listing.id) ?? null;
+    const enriched = {
+      ...listing,
+      store,
+      ...withEffectivePrice(listing.price, discount),
+      discountEndsAt: discount?.endsAt ?? null,
+    };
+    const arr = byProductId.get(listing.productId) ?? [];
+    arr.push(enriched);
+    byProductId.set(listing.productId, arr);
+  }
+
+  return byProductId;
 }

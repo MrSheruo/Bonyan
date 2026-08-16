@@ -6,7 +6,10 @@ import { fromNodeHeaders } from "better-auth/node";
 import { eq } from "drizzle-orm";
 import type { Request } from "express";
 
-export async function registerService(input: { email: string; password: string; name: string }) {
+export async function registerService(
+    input: { email: string; password: string; name: string },
+    req: Request
+) {
     try {
         const result = await auth.api.signUpEmail({
             body: {
@@ -14,6 +17,8 @@ export async function registerService(input: { email: string; password: string; 
                 password: input.password,
                 name: input.name,
             },
+            headers: fromNodeHeaders(req.headers),
+            asResponse: true,
         });
         return result;
     } catch (err: any) {
@@ -24,13 +29,18 @@ export async function registerService(input: { email: string; password: string; 
     }
 }
 
-export async function loginService(input: { email: string; password: string }) {
+export async function loginService(
+    input: { email: string; password: string },
+    req: Request
+) {
     try {
         const result = await auth.api.signInEmail({
             body: {
                 email: input.email,
                 password: input.password,
             },
+            headers: fromNodeHeaders(req.headers),
+            asResponse: true,
         });
         return result;
     } catch (err: any) {
@@ -39,8 +49,10 @@ export async function loginService(input: { email: string; password: string }) {
 }
 
 export async function logoutService(req: Request) {
-    await auth.api.signOut({
+    const result = await auth.api.signOut({
         headers: fromNodeHeaders(req.headers),
+        asResponse: true,
     });
+    return result;
 }
 
