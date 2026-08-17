@@ -41,7 +41,10 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useProduct } from "@/lib/hooks/use-products";
 import { useUser } from "@/lib/hooks/use-auth";
 import { useAddToCart } from "@/lib/hooks/use-cart";
-import { useSavedItemsStore, type SavedItem } from "@/lib/stores/saved-items-store";
+import {
+  useSavedItemsStore,
+  type SavedItem,
+} from "@/lib/stores/saved-items-store";
 import type { Product, ProductListing } from "@/lib/api/products";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -53,7 +56,6 @@ function starFill(rating: number): (1 | 0)[] {
   const whole = Math.floor(rating);
   return Array.from({ length: 5 }, (_, i) => (i < whole ? 1 : 0)) as (1 | 0)[];
 }
-
 
 interface ListingCardProps {
   listing: ProductListing;
@@ -78,7 +80,7 @@ function ListingCard({ listing, selected, onSelect }: ListingCardProps) {
         "group w-full text-left rounded-xl border-2 p-4 transition-all relative cursor-pointer disabled:cursor-not-allowed disabled:opacity-60",
         selected
           ? "border-primary bg-primary/5 shadow-xs ring-1 ring-primary/20"
-          : "border-border/70 bg-card hover:border-primary/40 hover:bg-muted/30"
+          : "border-border/70 bg-card hover:border-primary/40 hover:bg-muted/30",
       )}
     >
       <div className="flex items-start gap-3">
@@ -87,7 +89,7 @@ function ListingCard({ listing, selected, onSelect }: ListingCardProps) {
             "mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-all",
             selected
               ? "border-primary bg-primary"
-              : "border-input bg-background group-hover:border-primary/40"
+              : "border-input bg-background group-hover:border-primary/40",
           )}
         >
           {selected ? (
@@ -108,7 +110,10 @@ function ListingCard({ listing, selected, onSelect }: ListingCardProps) {
               </span>
             ) : null}
             {!listing.inStock ? (
-              <Badge variant="outline" className="text-muted-foreground border-muted ml-auto">
+              <Badge
+                variant="outline"
+                className="text-muted-foreground border-muted ml-auto"
+              >
                 Out of stock
               </Badge>
             ) : listing.hasDiscount ? (
@@ -122,7 +127,8 @@ function ListingCard({ listing, selected, onSelect }: ListingCardProps) {
             <span className="font-bold text-lg text-primary">
               ${listing.effectivePrice}
             </span>
-            {originalPrice !== null && originalPrice !== listing.effectivePrice ? (
+            {originalPrice !== null &&
+            originalPrice !== listing.effectivePrice ? (
               <span className="text-sm text-muted-foreground line-through">
                 ${originalPrice}
               </span>
@@ -140,7 +146,7 @@ export default function ProductDetailPage() {
   const { data: product, isLoading, isError, error } = useProduct(id);
 
   const router = useRouter();
-  const { isAuthenticated } = useUser();
+  const { isAuthenticated, isAuthReady } = useUser();
   const addToCart = useAddToCart();
 
   const savedItemsAdd = useSavedItemsStore((s) => s.addItem);
@@ -153,7 +159,9 @@ export default function ProductDetailPage() {
   const [carouselCount, setCarouselCount] = useState(0);
 
   const [qty, setQty] = useState(1);
-  const [selectedListingId, setSelectedListingId] = useState<number | null>(null);
+  const [selectedListingId, setSelectedListingId] = useState<number | null>(
+    null,
+  );
   const [justAdded, setJustAdded] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -162,18 +170,22 @@ export default function ProductDetailPage() {
   const otherImages = (product?.images || [])
     .filter((i) => !i.isPrimary)
     .map((i) => i.url);
-  const rawList =
-    primaryImage ? [primaryImage, ...otherImages] : (product?.images || []).map((i) => i.url);
-  const filteredList = rawList.filter(
-    (url): url is string => Boolean(url && url.trim().length > 0)
+  const rawList = primaryImage
+    ? [primaryImage, ...otherImages]
+    : (product?.images || []).map((i) => i.url);
+  const filteredList = rawList.filter((url): url is string =>
+    Boolean(url && url.trim().length > 0),
   );
-  const imageList = filteredList.length > 0 ? filteredList : ["/hero/hero_1.jpg"];
+  const imageList =
+    filteredList.length > 0 ? filteredList : ["/hero/hero_1.jpg"];
 
   useEffect(() => {
     if (!carouselApi) return;
     setCarouselCount(carouselApi.scrollSnapList().length);
     setCarouselIndex(carouselApi.selectedScrollSnap());
-    carouselApi.on("select", () => setCarouselIndex(carouselApi.selectedScrollSnap()));
+    carouselApi.on("select", () =>
+      setCarouselIndex(carouselApi.selectedScrollSnap()),
+    );
   }, [carouselApi]);
 
   // Auto-select listing (if 1) on product load
@@ -196,10 +208,10 @@ export default function ProductDetailPage() {
     () =>
       product
         ? [...(product.listings || [])].sort(
-            (a, b) => Number(a.effectivePrice) - Number(b.effectivePrice)
+            (a, b) => Number(a.effectivePrice) - Number(b.effectivePrice),
           )
         : [],
-    [product]
+    [product],
   );
   const lowestListing = sortedByPrice[0];
   const selectedListing =
@@ -221,10 +233,18 @@ export default function ProductDetailPage() {
   const decQty = () => setQty((q) => Math.max(QTY_MIN, q - 1));
   const incQty = () => setQty((q) => Math.min(QTY_MAX, q + 1));
 
-  const canAct = selectedListing !== null && selectedListing.inStock && qty >= 1;
+  const canAct =
+    selectedListing !== null && selectedListing.inStock && qty >= 1;
 
-  const requireAuth = <T extends (...a: any[]) => void>(fn: T) =>
+  const requireAuth =
+    <T extends (...a: any[]) => void>(fn: T) =>
     (...args: Parameters<T>) => {
+      if (!isAuthReady) {
+        toast.info(
+          "Still checking your session… please try again in a moment.",
+        );
+        return;
+      }
       if (!isAuthenticated) {
         router.push("/login");
         return;
@@ -264,16 +284,17 @@ export default function ProductDetailPage() {
     }
     setActionError(null);
     try {
-      await addToCart.mutateAsync(
-        { listingId: selectedListing.id, quantity: qty },
-      );
+      await addToCart.mutateAsync({
+        listingId: selectedListing.id,
+        quantity: qty,
+      });
       setJustAdded(true);
       setTimeout(() => setJustAdded(false), 1500);
       toast.success(`Added ${qty} × ${product?.name ?? "item"} to cart`);
     } catch (err) {
       const msg =
         err instanceof Error && (err as any).name === "ApiError"
-          ? (err as any).message ?? "Failed to add to cart"
+          ? ((err as any).message ?? "Failed to add to cart")
           : "Failed to add to cart";
       setActionError(msg);
       toast.error(msg);
@@ -303,7 +324,10 @@ export default function ProductDetailPage() {
               <Skeleton className="aspect-square w-full rounded-2xl bg-muted/60" />
               <div className="grid grid-cols-4 gap-3">
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <Skeleton key={i} className="aspect-square rounded-xl bg-muted/60" />
+                  <Skeleton
+                    key={i}
+                    className="aspect-square rounded-xl bg-muted/60"
+                  />
                 ))}
               </div>
             </div>
@@ -323,16 +347,27 @@ export default function ProductDetailPage() {
     return (
       <main className="w-full bg-background">
         <div className="max-w-3xl mx-auto px-6 py-16 flex flex-col items-center text-center gap-6">
-          <h1 className="text-3xl font-bold tracking-tight">Product not found</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Product not found
+          </h1>
           <Alert className="bg-destructive/10 border-destructive/30 text-left w-full">
-            <AlertTitle className="text-sm text-destructive">Unable to load product</AlertTitle>
+            <AlertTitle className="text-sm text-destructive">
+              Unable to load product
+            </AlertTitle>
             <AlertDescription className="text-sm text-destructive/90">
               {error instanceof Error
                 ? error.message
                 : "This product may have been removed or the link may be invalid."}
             </AlertDescription>
           </Alert>
-          <Link href="/products" className={cn("inline-flex items-center gap-2", cn("inline-flex items-center gap-2"), Button.prototype.className)}>
+          <Link
+            href="/products"
+            className={cn(
+              "inline-flex items-center gap-2",
+              cn("inline-flex items-center gap-2"),
+              Button.prototype.className,
+            )}
+          >
             <ArrowLeftIcon className="h-4 w-4" />
             Back to all products
           </Link>
@@ -354,7 +389,10 @@ export default function ProductDetailPage() {
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbLink href="/products" className="hover:text-foreground">
+                <BreadcrumbLink
+                  href="/products"
+                  className="hover:text-foreground"
+                >
                   All products
                 </BreadcrumbLink>
               </BreadcrumbItem>
@@ -375,10 +413,14 @@ export default function ProductDetailPage() {
               <Carousel
                 setApi={setCarouselApi}
                 opts={{ loop: true, align: "start" }}
-                plugins={imageList.length > 1 ? [Autoplay({ delay: 6000, stopOnInteraction: true })] : []}
+                plugins={
+                  imageList.length > 1
+                    ? [Autoplay({ delay: 6000, stopOnInteraction: true })]
+                    : []
+                }
                 className="w-full h-full"
               >
-                <CarouselContent className="h-full -ml-0">
+                <CarouselContent className="h-full ml-0">
                   {imageList.map((img, i) => (
                     <CarouselItem key={i} className="h-full pl-0 relative">
                       <Image
@@ -402,7 +444,7 @@ export default function ProductDetailPage() {
                   "absolute top-4 right-4 z-10 w-10 h-10 bg-background/90 backdrop-blur-xs rounded-full flex items-center justify-center shadow-xs transition-colors cursor-pointer",
                   isSaved
                     ? "text-red-500 hover:bg-red-50"
-                    : "text-muted-foreground hover:text-red-500 hover:bg-red-50/50"
+                    : "text-muted-foreground hover:text-red-500 hover:bg-red-50/50",
                 )}
               >
                 <HeartIcon
@@ -437,7 +479,7 @@ export default function ProductDetailPage() {
                         "relative aspect-square rounded-xl overflow-hidden border-2 transition-all cursor-pointer",
                         active
                           ? "border-primary ring-2 ring-primary/20"
-                          : "border-transparent hover:border-border/70"
+                          : "border-transparent hover:border-border/70",
                       )}
                     >
                       <Image
@@ -451,7 +493,9 @@ export default function ProductDetailPage() {
                   );
                 })}
                 {carouselCount > imageList.length
-                  ? Array.from({ length: carouselCount - imageList.length }).map((_, i) => (
+                  ? Array.from({
+                      length: carouselCount - imageList.length,
+                    }).map((_, i) => (
                       <div
                         key={`dup-${i}`}
                         className="relative aspect-square rounded-xl overflow-hidden border border-border/40"
@@ -525,7 +569,9 @@ export default function ProductDetailPage() {
                   <TruckIcon className="h-4 w-4" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-medium">Free artisan delivery</span>
+                  <span className="text-sm font-medium">
+                    Free artisan delivery
+                  </span>
                   <span className="text-xs text-muted-foreground">
                     Within 2–5 business days
                   </span>
@@ -536,7 +582,9 @@ export default function ProductDetailPage() {
                   <ShieldCheckIcon className="h-4 w-4" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-medium">Handmade guarantee</span>
+                  <span className="text-sm font-medium">
+                    Handmade guarantee
+                  </span>
                   <span className="text-xs text-muted-foreground">
                     Verified artisan makers
                   </span>
@@ -552,7 +600,8 @@ export default function ProductDetailPage() {
                     Choose a seller
                   </h2>
                   <span className="text-xs text-muted-foreground">
-                    {(product.listings || []).filter((l) => l.inStock).length} in stock
+                    {(product.listings || []).filter((l) => l.inStock).length}{" "}
+                    in stock
                   </span>
                 </div>
                 <div className="flex flex-col gap-3">
@@ -588,7 +637,7 @@ export default function ProductDetailPage() {
                   <div
                     role="status"
                     aria-label={`Quantity: ${qty}`}
-                    className="h-11 min-w-[3.25rem] flex items-center justify-center px-3 font-semibold text-foreground border-x border-border/70"
+                    className="h-11 min-w-13 flex items-center justify-center px-3 font-semibold text-foreground border-x border-border/70"
                   >
                     {qty}
                   </div>
@@ -603,7 +652,10 @@ export default function ProductDetailPage() {
                   </button>
                 </div>
                 {selectedListing?.inStock === false ? (
-                  <Badge variant="outline" className="text-muted-foreground border-muted h-9">
+                  <Badge
+                    variant="outline"
+                    className="text-muted-foreground border-muted h-9"
+                  >
                     Out of stock
                   </Badge>
                 ) : null}

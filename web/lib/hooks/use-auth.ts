@@ -87,12 +87,14 @@ export function useUser() {
 
   const user = meQuery.data ?? null;
   const isLoading = meQuery.isLoading;
-  const isAuthenticated = Boolean(user);
+  const isAuthReady = !meQuery.isPending;
+  const isAuthenticated = isAuthReady && Boolean(user);
 
   return {
     user,
     isLoading,
     isAuthenticated,
+    isAuthReady,
     error: meQuery.error,
     refetch: meQuery.refetch,
     logout: logoutMutation.mutate,

@@ -10,16 +10,16 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children, fallback }: AuthGuardProps) {
-  const { isAuthenticated, isLoading } = useUser();
+  const { isAuthenticated, isAuthReady } = useUser();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (isAuthReady && !isAuthenticated) {
       router.replace("/login");
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [isAuthReady, isAuthenticated, router]);
 
-  if (isLoading) {
+  if (!isAuthReady) {
     return (
       fallback || (
         <div className="flex min-h-[50vh] items-center justify-center">

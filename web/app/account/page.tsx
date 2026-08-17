@@ -67,7 +67,7 @@ function AccountPageInner() {
               href="/register"
               className={cn(
                 buttonVariants({ variant: "outline" }),
-                "w-full sm:w-auto"
+                "w-full sm:w-auto",
               )}
             >
               Create Account
@@ -77,7 +77,7 @@ function AccountPageInner() {
             href="/"
             className={cn(
               buttonVariants({ variant: "ghost", size: "sm" }),
-              "self-center"
+              "self-center",
             )}
           >
             Back to home
@@ -104,7 +104,7 @@ export default function AccountPage() {
         </div>
       }
     >
-      <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+      <div className="w-full max-w-350 mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         <AccountPageInner />
         <Toaster
           position="top-right"

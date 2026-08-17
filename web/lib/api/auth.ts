@@ -129,7 +129,10 @@ export async function getMe(): Promise<User | null> {
     console.warn("userSchema validation warning:", parsed.error);
     return data as User;
   } catch (error) {
-    if (error instanceof ApiError && (error.status === 401 || error.status === 409)) {
+    if (
+      error instanceof ApiError &&
+      (error.status === 401 || error.status === 409)
+    ) {
       return null;
     }
     console.warn("getMe failed unexpectedly:", error);

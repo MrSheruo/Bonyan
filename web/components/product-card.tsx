@@ -34,7 +34,7 @@ export const ProductCard = ({
   savedPrice,
 }: ProductCardProps) => {
   const router = useRouter();
-  const { isAuthenticated } = useUser();
+  const { isAuthenticated, isAuthReady } = useUser();
   const addToCartMutation = useAddToCart();
 
   const isSaved = useSavedItemsStore((s) => s.isSaved);
@@ -64,14 +64,15 @@ export const ProductCard = ({
   const rawList = primaryImage
     ? [primaryImage, ...otherImages]
     : (product.images || []).map((i) => i.url);
-  const filteredList = rawList.filter(
-    (url): url is string => Boolean(url && url.trim().length > 0)
+  const filteredList = rawList.filter((url): url is string =>
+    Boolean(url && url.trim().length > 0),
   );
   const imageList =
     filteredList.length > 0 ? filteredList : ["/hero/hero_1.jpg"];
 
   // Snapshot mode detection: savedListingId was passed — treat as saved snapshot.
-  const isSnapshotMode = typeof savedListingId === "string" && savedListingId.length > 0;
+  const isSnapshotMode =
+    typeof savedListingId === "string" && savedListingId.length > 0;
 
   // Listings & Price calculations
   const listings = (product.listings || []).filter(Boolean);
@@ -81,24 +82,23 @@ export const ProductCard = ({
 
   // Find lowest price listing (same logic used for "from $X" display + save snapshot)
   const sortedByPrice = [...listings].sort(
-    (a, b) => Number(a.effectivePrice) - Number(b.effectivePrice)
+    (a, b) => Number(a.effectivePrice) - Number(b.effectivePrice),
   );
   const lowestListing = sortedByPrice[0];
 
-  const snapshotEffectivePrice = isSnapshotMode && typeof savedPrice === "number"
-    ? savedPrice
-    : undefined;
+  const snapshotEffectivePrice =
+    isSnapshotMode && typeof savedPrice === "number" ? savedPrice : undefined;
 
-  const effectivePrice = snapshotEffectivePrice !== undefined
-    ? snapshotEffectivePrice
-    : lowestListing
-    ? lowestListing.effectivePrice
-    : null;
+  const effectivePrice =
+    snapshotEffectivePrice !== undefined
+      ? snapshotEffectivePrice
+      : lowestListing
+        ? lowestListing.effectivePrice
+        : null;
 
   const originalPrice =
     lowestListing && lowestListing.hasDiscount ? lowestListing.price : null;
-  const storeName =
-    lowestListing?.store?.name || product.brand || "Bonyan";
+  const storeName = lowestListing?.store?.name || product.brand || "Bonyan";
 
   const handleToggleSave = () => {
     if (productSaved) {
@@ -117,11 +117,12 @@ export const ProductCard = ({
     const listingId = snapshotListing
       ? String(snapshotListing.id)
       : String(savedListingId);
-    const price = snapshotEffectivePrice !== undefined
-      ? snapshotEffectivePrice
-      : snapshotListing
-      ? Number(snapshotListing.effectivePrice)
-      : Number(savedPrice ?? 0);
+    const price =
+      snapshotEffectivePrice !== undefined
+        ? snapshotEffectivePrice
+        : snapshotListing
+          ? Number(snapshotListing.effectivePrice)
+          : Number(savedPrice ?? 0);
 
     addItem({
       productId: product.id,
@@ -139,6 +140,10 @@ export const ProductCard = ({
   };
 
   const handleAddToCart = () => {
+    if (!isAuthReady) {
+      toast.info("Still checking your session… please try again in a moment.");
+      return;
+    }
     if (!isAuthenticated) {
       router.push("/login");
       return;
@@ -156,7 +161,7 @@ export const ProductCard = ({
             setJustAdded(true);
             setTimeout(() => setJustAdded(false), 1500);
           },
-        }
+        },
       );
       return;
     }
@@ -173,7 +178,7 @@ export const ProductCard = ({
             setJustAdded(true);
             setTimeout(() => setJustAdded(false), 1500);
           },
-        }
+        },
       );
     } else {
       setDialogOpen(true);
@@ -218,7 +223,7 @@ export const ProductCard = ({
             opts={{ loop: true, skipSnaps: false, align: "start" }}
             className="w-full h-full"
           >
-            <CarouselContent className="h-full -ml-0">
+            <CarouselContent className="h-full ml-0">
               {imageList.map((imgUrl, index) => (
                 <CarouselItem key={index} className="h-full pl-0 relative">
                   <Image

@@ -34,7 +34,7 @@ import { cn } from "@/lib/utils";
 
 export function CartDrawer() {
   const [open, setOpen] = useState(false);
-  const { isAuthenticated, isLoading: isAuthLoading } = useUser();
+  const { isAuthenticated, isLoading: isAuthLoading, isAuthReady } = useUser();
   const { data: cart, isLoading: isCartLoading } = useCart();
   const isLoading = isAuthLoading || isCartLoading;
   const updateItemMutation = useUpdateCartItem();
@@ -89,7 +89,7 @@ export function CartDrawer() {
           </SheetDescription>
         </SheetHeader>
 
-        {isAuthLoading ? (
+        {isAuthLoading || !isAuthReady ? (
           <div className="flex-1 flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>

@@ -35,7 +35,9 @@ function toProductShape(mock: any): Product {
 const HomePage = async () => {
   let realProducts: Product[] = [];
   try {
-    const res = await fetch("http://localhost:8080/products", { cache: "no-store" });
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {
+      cache: "force-cache",
+    });
     if (res.ok) {
       const data = await res.json();
       realProducts = data.items || [];
@@ -44,8 +46,14 @@ const HomePage = async () => {
     realProducts = [];
   }
 
-  const featured = realProducts.length > 0 ? realProducts.slice(0, 6) : mockProducts.slice(0, 5).map(toProductShape);
-  const newArrivals = realProducts.length > 6 ? realProducts.slice(6, 12) : mockProducts.slice(4, 10).map(toProductShape);
+  const featured =
+    realProducts.length > 0
+      ? realProducts.slice(0, 6)
+      : mockProducts.slice(0, 5).map(toProductShape);
+  const newArrivals =
+    realProducts.length > 6
+      ? realProducts.slice(6, 12)
+      : mockProducts.slice(4, 10).map(toProductShape);
 
   return (
     <main className="flex flex-col gap-20 mb-32">
